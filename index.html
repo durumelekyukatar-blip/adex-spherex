@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADEX · SPHEREx Infrared Explorer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><circle cx='5' cy='5' r='4' fill='%23ff6b4a'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c1022;--panel:#131a38;--line:#2a3566;--text:#eaeeff;--mute:#94a0cf;--ir:#ff6b4a;--obs:#5ce1e6;--est:#8fa8ff;--sim:#ffc857}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 'Bricolage Grotesque',system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.logo{font-weight:800;font-size:24px;letter-spacing:.06em}.logo i{color:var(--ir);font-style:normal}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+.hr{display:flex;gap:10px;align-items:center}
+button,select,input,textarea{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 14px}
+button,select{cursor:pointer}
+button:hover:not(:disabled),select:hover{border-color:var(--ir)}
+button.on{background:var(--ir);border-color:var(--ir);color:#1a0b07;font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.go{background:var(--ir);border-color:var(--ir);color:#1a0b07;font-weight:700}
+:focus-visible{outline:2px solid var(--obs);outline-offset:2px}
+main{max-width:1240px;margin:0 auto;padding:26px 24px 60px}
+h1{font-size:clamp(26px,4vw,44px);line-height:1.08;margin:6px 0 10px;font-weight:800;max-width:22ch}
+h2{font-size:17px;margin:0 0 10px}
+.sub{color:var(--mute);max-width:70ch;margin:0 0 22px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+canvas{display:block;max-width:100%}
+#cv{width:100%;height:auto;border-radius:6px;background:#000;cursor:crosshair;border:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--ir);width:100%;padding:0}
+.tag{display:inline-block;font:500 12px 'IBM Plex Mono',monospace;border:1px solid;border-radius:6px;padding:2px 8px}
+.t-obs{color:var(--obs)}.t-est{color:var(--est)}.t-sim{color:var(--sim)}.t-demo{color:var(--ir)}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:13.5px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.row span:first-child{color:var(--mute)}
+.warn{border-left:3px solid var(--sim);padding:6px 12px;color:var(--mute);margin-top:14px;font-size:14px}
+.vr{margin:10px 0 0}.vr label{display:flex;justify-content:space-between;font-size:15px}
+.vr small{display:block;color:var(--mute);font-size:12.5px;line-height:1.35;margin-top:2px}
+section{display:none}section.on{display:block}
+.planets{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
+.planets canvas{margin:0 auto;width:100%;max-width:280px;height:auto}
+.planets p{margin:4px 0 0;color:var(--mute);font-size:14px}
+.big{font-size:30px;font-weight:800;color:var(--ir);line-height:1.1}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+.cards .box{border-top:3px solid var(--ir)}
+.cards p{margin:0;color:var(--mute);font-size:15px}
+.pre{display:flex;gap:6px;flex-wrap:wrap}.pre button{padding:5px 11px;font-size:14px}
+.meter{height:8px;background:#0a0f26;border-radius:4px;overflow:hidden;flex:1}.meter i{display:block;height:100%;background:var(--ir)}
+.mr{display:flex;gap:10px;align-items:center;padding:4px 0;font-size:14px}.mr span:first-child{width:130px;color:var(--mute)}
+.idx{font-size:44px;font-weight:800;color:var(--obs);line-height:1}
+textarea{width:100%;min-height:72px;resize:vertical;margin-top:8px}
+.note{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:500}
+/* giriş */
+#intro{position:fixed;inset:0;z-index:50;overflow:hidden}
+#intro.gone{display:none}#intro.nt *{transition:none!important}
+.door{position:absolute;top:0;bottom:0;width:50%;background:#070a18;background-size:100vw 100vh;transition:transform .9s cubic-bezier(.7,0,.3,1)}
+.door.l{left:0}.door.r{right:0;background-position:-50vw 0}
+#intro.open .l{transform:translateX(-100%)}#intro.open .r{transform:translateX(100%)}
+#ic{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:2;transition:opacity .5s}
+#ic.fade{opacity:0}
+#ic h1{max-width:none;font-size:clamp(34px,7vw,72px)}
+#ic .logo{font-size:20px;color:var(--mute)}
+#uname{width:min(340px,86vw);text-align:center;font-size:18px;margin-top:10px}
+#nerr{color:var(--sim);min-height:24px;font-size:14px}
+#rk{position:absolute;left:50%;bottom:0;width:64px;margin-left:-32px;z-index:3;transform:translateY(130%);transition:transform 1.7s cubic-bezier(.5,0,.9,.6)}
+#intro.fly #rk{transform:translateY(-125vh)}
+#lb{position:absolute;left:50%;bottom:26px;margin-left:-30px;width:60px;height:60px;border-radius:50%;z-index:2;display:grid;place-items:center;padding:0;border:2px solid var(--ir);animation:pl 2s infinite}
+#intro.fly #lb{opacity:0;animation:none}
+@keyframes pl{0%{box-shadow:0 0 0 0 rgba(255,107,74,.5)}100%{box-shadow:0 0 0 18px rgba(255,107,74,0)}}
+@media(prefers-reduced-motion:reduce){#lb{animation:none}}
+@media print{
+ :root{--bg:#fff;--panel:#fff;--text:#000;--mute:#444;--line:#bbb;--ir:#c0392b;--obs:#006b73;--est:#223;--sim:#7a5600}
+ header,#intro,.noprint{display:none!important}section{display:none!important}section#report{display:block!important}
+}
+/* Observatory interface refinements */
+:root{--bg:#070b14;--panel:#0d1422;--line:#202e42;--text:#edf4fb;--mute:#8ea2b8;--ir:#ff9b62;--obs:#6ce3d0;--est:#9bb8ff;--sim:#f5c76b}
+body{background:radial-gradient(ellipse at 50% -20%,#17263a 0,transparent 56%),var(--bg);letter-spacing:.005em}
+header{background:rgba(7,11,20,.92);backdrop-filter:blur(16px);border-color:#1c2a3e;padding:13px max(24px,calc((100vw - 1400px)/2))}
+.logo{letter-spacing:.15em}.logo i{color:var(--ir)}main{max-width:1440px;padding-top:34px}
+.box{background:linear-gradient(145deg,rgba(16,26,42,.98),rgba(10,17,29,.98));border-color:#26364b;border-radius:16px;box-shadow:0 14px 38px #0003;padding:20px}
+#cv{border-radius:11px;border-color:#354c66;background:#03070d}button,select,input,textarea{background:#101b2c;border-color:#293b52;border-radius:10px}
+button{transition:transform .18s,border-color .18s,background .18s}button:hover:not(:disabled){transform:translateY(-1px)}button.go,button.on{background:var(--ir);border-color:var(--ir)}
+.tag{letter-spacing:.04em;border-radius:999px;padding:3px 10px}.warn{background:#f5c76b0c;border-left-color:var(--sim);border-radius:0 9px 9px 0}
+.cards .box{border-top:2px solid var(--ir)}#uploadRow{padding:12px;border:1px solid #26364b;border-radius:12px;background:#080f1b;gap:12px}
+#uploadRow label{font-size:13px;color:var(--mute);display:grid;gap:5px;min-width:180px;flex:1}#uploadRow input{width:100%;font-size:12px;padding:8px}
+#obsMeta{font-size:12px;color:var(--mute);margin-top:8px;line-height:1.5}@media(max-width:650px){header{padding:10px 14px}main{padding:20px 14px 42px}.box{padding:15px}#uploadRow{display:grid}}
+.science-showcase{margin-top:18px}.science-showcase>p{max-width:78ch;color:var(--mute);margin:0 0 14px}.science-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.science-card{overflow:hidden;border:1px solid #26364b;border-radius:14px;background:#080f1b}.science-card img{display:block;width:100%;height:190px;object-fit:cover;background:#03070d}.science-card:nth-child(3) img{object-fit:contain;background:#fff}.science-copy{padding:14px}.science-copy h3{font-size:16px;margin:0 0 5px}.science-copy p{font-size:13px;color:var(--mute);margin:0 0 10px;line-height:1.5}.science-copy a{font-size:12px;color:var(--obs);text-decoration:none}.science-copy a:hover{text-decoration:underline}.science-kicker{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--obs);text-transform:uppercase;margin-bottom:6px}@media(max-width:850px){.science-grid{grid-template-columns:1fr 1fr}.science-card:last-child{grid-column:span 2}}@media(max-width:560px){.science-grid{grid-template-columns:1fr}.science-card:last-child{grid-column:auto}.science-card img{height:210px}}
+.exo-ident{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;padding:10px 13px;border:1px solid #29435b;border-radius:12px;background:linear-gradient(105deg,#0b1725,#111d30)}.exo-ident strong{display:block;font:500 14px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--obs)}.exo-ident small{display:block;color:var(--mute);font-size:11px;margin-top:2px}.exo-mark{flex:none;border:1px solid #36756f;color:#8de8d4;border-radius:999px;padding:4px 9px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.08em}.planets p{font-weight:600;letter-spacing:.03em;color:#dbe7f3}
+</style>
+</head>
+<body>
+<div id="intro">
+  <div class="door l"></div><div class="door r"></div>
+  <div id="ic">
+    <div class="logo">AD<i style="color:var(--ir);font-style:normal">E</i>X</div>
+    <h1 data-i="welcome"></h1>
+    <p class="sub" data-i="tag" style="margin:0 0 12px"></p>
+    <input id="uname" maxlength="24" autocomplete="off" aria-label="name">
+    <div id="nerr"></div>
+    <select id="lang0" aria-label="Language"><option value="tr">Türkçe</option><option value="en">English</option><option value="de">Deutsch</option></select>
+  </div>
+  <button id="lb" aria-label="Launch"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ff6b4a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+  <svg id="rk" viewBox="0 0 64 110"><path d="M32 2C46 22 48 48 44 76H20C16 48 18 22 32 2Z" fill="#eaeeff"/><circle cx="32" cy="38" r="8" fill="#0c1022" stroke="#5ce1e6" stroke-width="3"/><path d="M20 62L4 88l16-6zM44 62l16 26-16-6z" fill="#ff6b4a"/><path d="M24 78h16l-8 30z" fill="#ffc857"/></svg>
+</div>
+
+<header>
+  <div class="logo">AD<i>E</i>X</div>
+  <nav>
+    <button data-go="scan" class="on" data-i="s1"></button>
+    <button data-go="lab" id="navlab" data-i="s2" disabled></button>
+    <button data-go="report" id="navrep" data-i="s3" disabled></button>
+  </nav>
+  <div class="hr"><span class="tag t-obs" id="opn"></span>
+  <select id="lang" aria-label="Language"><option value="tr">Türkçe</option><option value="en">English</option><option value="de">Deutsch</option></select></div>
+</header>
+<main>
+<section id="scan" class="on">
+  <h1 data-i="title"></h1>
+  <p class="sub" data-i="sub"></p>
+  <div class="grid">
+    <div class="box">
+      <canvas id="cv" width="900" height="560" aria-label="SPHEREx"></canvas>
+      <div class="bar">
+        <button data-m="blink" class="on" data-i="blink"></button>
+        <button data-m="side" data-i="side"></button>
+        <button data-m="diff" data-i="diff"></button>
+        <input type="range" id="sl" min="0" max="100" value="0" aria-label="T1 / T2">
+      </div>
+      <div class="bar mono"><span id="src" class="tag"></span><span style="color:var(--mute)" data-i="hint"></span><span style="margin-left:auto" id="curs"></span></div>
+      <div class="bar" id="uploadRow"><label>Epoch A · PNG<input id="fileA" type="file" accept=".png,.jpg,.jpeg,.webp" aria-label="Epoch A image"></label><label>Epoch B · PNG<input id="fileB" type="file" accept=".png,.jpg,.jpeg,.webp" aria-label="Epoch B image"></label></div><div id="obsMeta">İki ayrı gözlem dönemine ait eşlenmiş görüntüleri yükleyin. FITS dosyalarını önce convert.py ile PNG’ye dönüştürün.</div>
+    </div>
+    <div class="box">
+      <h2 data-i="card"></h2>
+      <div id="card" class="mono"></div>
+      <div class="bar"><button id="send" class="go" disabled></button><button id="dl" data-i="dl"></button></div>
+      <div class="warn" data-i="warn1"></div>
+    </div>
+  </div>
+  <div class="box" style="margin-top:18px">
+    <h2>SPHEREx · gerçek kızılötesi spektrum</h2>
+    <p class="sub" style="margin-bottom:10px">FITS analiz betiğinin ürettiği JSON spektrumunu açın. Ölçümler, seçilen gökyüzü koordinatındaki SPHEREx görüntülerinden gelir.</p>
+    <div class="bar"><input id="spectrumFile" type="file" accept=".json,application/json" aria-label="SPHEREx spectrum JSON"><span id="spectrumStatus" class="tag t-demo">VERİ BEKLENİYOR</span></div>
+    <canvas id="spectrumChart" width="900" height="300" style="width:100%;height:auto;margin-top:14px"></canvas>
+    <div id="spectrumInfo" class="mono" style="color:var(--mute)">Henüz SPHEREx FITS analizi yüklenmedi.</div>
+  </div>
+</section>
+
+<section id="lab">
+  <h1 data-i="ltitle"></h1>
+  <p class="sub"><span id="lc" class="tag t-obs"></span> <span data-i="hypo"></span></p>
+  <div class="grid">
+    <div class="box">
+      <div class="exo-ident"><div><strong>SIM-EXO-01 b</strong><small data-i="exo_note"></small></div><span class="exo-mark" data-i="exo_badge"></span></div>
+      <div class="planets">
+        <div><canvas id="pb" width="280" height="280"></canvas><p data-i="base"></p><div class="mono" id="tb"></div></div>
+        <div><canvas id="ps" width="280" height="280"></canvas><p data-i="scen"></p><div class="mono" id="tsn"></div></div>
+      </div>
+      <div class="bar" style="justify-content:center"><div class="big" id="delta"></div></div>
+      <div class="cards" style="margin-top:14px">
+        <div class="box"><h2 data-i="c_t"></h2><p id="x_t"></p></div>
+        <div class="box"><h2 data-i="c_w"></h2><p id="x_w"></p></div>
+        <div class="box"><h2 data-i="c_l"></h2><p id="x_l"></p></div>
+        <div class="box"><h2 data-i="c_a"></h2><p id="x_a"></p></div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="pre">
+        <button data-p="earth" data-i="p_earth"></button><button data-p="snow" data-i="p_snow"></button>
+        <button data-p="hot" data-i="p_hot"></button><button data-p="mars" data-i="p_mars"></button>
+      </div>
+      <div id="vars"></div>
+      <div class="bar"><button id="setb" data-i="setbase"></button><span class="tag t-sim">USER-SIMULATED</span><span class="tag t-est">ESTIMATED</span></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:18px">
+    <div class="box">
+      <h2 data-i="lc_t"></h2><p id="lchg" style="margin:0"></p>
+      <h2 style="margin-top:18px" data-i="ch_t"></h2>
+      <canvas id="ch" width="560" height="230" style="width:100%;height:auto"></canvas>
+    </div>
+    <div class="box">
+      <h2 data-i="der_t"></h2>
+      <div class="idx" id="idx"></div><div style="color:var(--mute);font-size:13px;margin-bottom:8px" data-i="idx"></div>
+      <div id="meters"></div>
+      <div id="der" class="mono" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="box science-showcase">
+    <h2 data-i="ref_title"></h2>
+    <p data-i="ref_intro"></p>
+    <div class="science-grid">
+      <article class="science-card"><img src="data/spherex-cygnus-ice.jpg" alt="NASA SPHEREx infrared map of interstellar water ice and dust in Cygnus X"><div class="science-copy"><div class="science-kicker" data-i="ref_obs"></div><h3>Cygnus X · SPHEREx</h3><p data-i="ref_spherex"></p><a href="https://spherex.caltech.edu/image/spherex20260415a-nasas-spherex-observatory-maps-interstellar-ice-in-milky-way" target="_blank" rel="noreferrer" data-i="ref_source"></a></div></article>
+      <article class="science-card"><img src="data/trappist-1-system-concept.jpg" alt="NASA artist concept of the seven rocky planets orbiting TRAPPIST-1"><div class="science-copy"><div class="science-kicker" data-i="ref_art"></div><h3>TRAPPIST-1</h3><p data-i="ref_trappist"></p><a href="https://science.nasa.gov/asset/webb/trappist-1-system-artists-concept/" target="_blank" rel="noreferrer" data-i="ref_source"></a></div></article>
+      <article class="science-card"><img src="data/wasp-39b-nirspec-spectrum.png" alt="NASA Webb NIRSpec transmission spectrum of WASP-39 b with carbon dioxide feature"><div class="science-copy"><div class="science-kicker" data-i="ref_measured"></div><h3>WASP-39 b · NIRSpec</h3><p data-i="ref_wasp"></p><a href="https://science.nasa.gov/asset/webb/exoplanet-wasp-39-b-nirspec-transmission-spectrum/" target="_blank" rel="noreferrer" data-i="ref_source"></a></div></article>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:18px">
+    <h2 data-i="sc_t"></h2>
+    <input id="scn" maxlength="40" style="width:100%" data-ph="sc_name">
+    <textarea id="sct" maxlength="400" data-ph="sc_ph"></textarea>
+    <div class="bar"><button id="scs" class="go" data-i="sc_save"></button><span style="color:var(--mute);font-size:13px" data-i="sc_note"></span></div>
+    <div id="sclist"></div>
+  </div>
+  <div class="bar"><button id="exit" class="go" data-i="exit"></button></div>
+  <div class="warn" data-i="lim"></div>
+</section>
+
+<section id="report">
+  <h1 data-i="r_t"></h1>
+  <div id="rep"></div>
+  <div class="bar noprint"><button id="pr" data-i="print"></button><button id="rj" data-i="json"></button><button id="nm" class="go" data-i="newm"></button></div>
+</section>
+</main>
+
+<script id="embeddedSpectrum" type="application/json">{
+  "product": "NASA SPHEREx DR1 Level-2 infrared screening spectrum",
+  "mission": "NASA SPHEREx",
+  "release": "DR1",
+  "target": {
+    "ra_deg": 347.56066564374015,
+    "dec_deg": -3.631276036048608
+  },
+  "measurements": [
+    {
+      "source_file": "level2_2025W22_2B_0161_1D1_spx_l2b-v27-2026-200.fits.gz",
+      "observation_id": "2025W22_2B_0161_1D1",
+      "date_obs": "2025-05-30T09:28:57.327",
+      "mjd_obs": 60825.395107948,
+      "exposure_seconds": 113.5826,
+      "small_slew": 1,
+      "detector": 1,
+      "wavelength_um": 0.9064159593170651,
+      "bandwidth_um": 0.023060726498592116,
+      "brightness_mjy_sr": 0.1393355632370169,
+      "uncertainty_mjy_sr": 0.008066855606911396,
+      "quality_ok": true,
+      "x_pixel": 35.99999999969182,
+      "y_pixel": 16.999999999977284
+    },
+    {
+      "source_file": "level2_2025W22_2B_0161_2D1_spx_l2b-v27-2026-200.fits.gz",
+      "observation_id": "2025W22_2B_0161_2D1",
+      "date_obs": "2025-05-30T09:31:06.257",
+      "mjd_obs": 60825.396600194,
+      "exposure_seconds": 113.5826,
+      "small_slew": 2,
+      "detector": 1,
+      "wavelength_um": 0.928346535297287,
+      "bandwidth_um": 0.023623364800933952,
+      "brightness_mjy_sr": 0.12702352872916634,
+      "uncertainty_mjy_sr": 0.007200223533711053,
+      "quality_ok": true,
+      "x_pixel": 36.52120396499807,
+      "y_pixel": 16.84095889658494
+    },
+    {
+      "source_file": "level2_2025W22_2B_0161_1D4_spx_l2b-v27-2026-200.fits.gz",
+      "observation_id": "2025W22_2B_0161_1D4",
+      "date_obs": "2025-05-30T09:28:57.327",
+      "mjd_obs": 60825.395107948,
+      "exposure_seconds": 113.5826,
+      "small_slew": 1,
+      "detector": 4,
+      "wavelength_um": 3.0265717837401542,
+      "bandwidth_um": 0.08810655935856218,
+      "brightness_mjy_sr": 0.0734091911997114,
+      "uncertainty_mjy_sr": 0.00446682940445618,
+      "quality_ok": true,
+      "x_pixel": 28.886301178934435,
+      "y_pixel": 28.491588943286008
+    },
+    {
+      "source_file": "level2_2025W22_2B_0161_2D4_spx_l2b-v27-2026-200.fits.gz",
+      "observation_id": "2025W22_2B_0161_2D4",
+      "date_obs": "2025-05-30T09:31:06.257",
+      "mjd_obs": 60825.396600194,
+      "exposure_seconds": 113.5826,
+      "small_slew": 2,
+      "detector": 4,
+      "wavelength_um": 3.109725950553739,
+      "bandwidth_um": 0.09098527922587128,
+      "brightness_mjy_sr": 0.0699259409537682,
+      "uncertainty_mjy_sr": 0.004604937424170904,
+      "quality_ok": true,
+      "x_pixel": 28.198275529434444,
+      "y_pixel": 28.430554816401408
+    }
+  ],
+  "units": {
+    "wavelength": "um",
+    "brightness": "MJy/sr"
+  },
+  "method": "circular-aperture mean minus median annulus; reject artifact flags but permit the informational SOURCE flag; variance-based uncertainty when available",
+  "caveat": "Exploratory screening only. Validate with IRSA spectral-WCS calibration products, PSF/ePSF photometry, and pipeline documentation."
+}</script>
+<script>
+const T={
+tr:{welcome:"Hoş geldiniz",tag:"Kızılötesi gökyüzünden gezegen iklimi laboratuvarına",name:"Adınızı yazın",nameErr:"Devam etmek için adınızı yazın.",op:"Operatör",s1:"1 · Tara",s2:"2 · Laboratuvar",s3:"3 · Rapor",title:"Kızılötesi gökyüzünde değişen kaynak adayı bul",sub:"NASA SPHEREx görüntülerini kaydırıcıyla karşılaştır, değişen bir noktayı işaretle ve onu laboratuvara gönder.",blink:"Blink",side:"Yan yana",diff:"Fark",hint:"Tıkla = aday işaretle",card:"Aday kartı",dl:"JSON indir",send:"{n} laboratuvarına gönder",warn1:"Bu bir ötegezegen keşfi değildir. İşaretlenen nokta yalnızca değişen kaynak adayıdır ve bağımsız doğrulama gerekir.",none:"Henüz aday yok.",cid:"Aday",pos:"Piksel",st:"Durum",cat:"Katalog",wait:"bekleniyor",src:"Kaynak",bA:"Parlaklık A",bB:"Parlaklık B",bD:"Fark",ltitle:"Simüle edilen ötegezegenin iklimini incele",hypo:"Ötegezegen laboratuvarı NASA gözleminden ayrı bir simülasyondur. Gezegen parametreleri ölçüm değil, varsayımdır.",base:"Referans ötegezegen",scen:"Senaryo ötegezegeni",setbase:"Şu anı başlangıç yap",p_earth:"Kayalık · ılıman",p_snow:"Buz ötegezegeni",p_hot:"Sıcak ötegezegen",p_mars:"Kayalık · ince atmosfer",v_A:"Albedo",v_D:"Yıldıza uzaklık",v_L:"Yıldız parlaklığı",v_G:"Sera çarpanı",v_O:"Okyanus oranı",v_P:"Yüzey basıncı",v_M:"Kütle",v_R:"Yarıçap",v_B:"Manyetik kalkan",v_X:"Yıldız aktivitesi",a0:"Sakin",a1:"Güneş gibi",a2:"Parlamalı",d_A:"Yüzeyin yansıttığı ışık oranı. Yükselince gezegen soğur.",d_D:"Akı, uzaklığın karesiyle azalır. Uzaklaştıkça soğur.",d_L:"Yıldızın parlaklığı. Gelen enerjiyle doğru orantılıdır.",d_G:"Atmosferin ısıyı tutma çarpanı. Yükselince yüzey ısınır.",d_O:"Yüzeydeki su payı. Bu modelde yalnızca görünümü değiştirir.",d_P:"Suyun kaynama noktasını ve sıvı su aralığını belirler.",d_M:"Yüzey çekimini ve atmosferi tutma gücünü belirler.",d_R:"Yarıçap büyüdükçe çekim azalır, kaçış hızı düşer.",d_B:"Yıldız parçacıklarını saptırır, radyasyonu azaltır.",d_X:"Parlama sıklığı yükseldikçe radyasyon artar.",c_t:"Sıcaklık",c_w:"Su",c_l:"Işık",c_a:"Atmosfer",dT:"değişim",t_txt:"Yüzey sıcaklığı yaklaşık {t} °C. Başlangıca göre {d} °C.",w_ice:"Çoğu su donmuş olurdu. Yüzey buzla kaplanır.",w_liq:"Sıvı su için uygun aralık. Okyanuslar kalabilir.",w_hot:"Çok sıcak. Su kaynar veya buharlaşır.",l_txt:"Yıldızdan gelen enerji Dünya'dakinin {x} katı.",a_thin:"Zayıf sera etkisi. Isıyı tutmakta zayıf.",a_mid:"Dünya'ya benzer, dengeli sera etkisi.",a_hot:"Güçlü sera etkisi. Isı birikir.",lc_t:"Son değişiklik",lc_none:"Bir değişkeni oynat, etkisini burada oku.",lc_txt:"{v}: {a} → {b}. Yüzey sıcaklığı {d} °C, uygunluk indeksi {i} puan.",ch_t:"Yüzey sıcaklığı ve yıldıza uzaklık",band:"Sıvı su aralığı",der_t:"Türetilen değerler",idx:"Uygunluk indeksi (eğitsel, 0-100)",i_t:"Sıcaklık",i_p:"Basınç",i_r:"Radyasyon",i_k:"Atmosfer tutma",g_:"Yüzey çekimi",ve:"Kaçış hızı",tb:"Kaynama noktası",dose:"Radyasyon indeksi",sc_t:"Kendi senaryonu yaz",sc_name:"Senaryo adı",sc_ph:"Ne denemek istiyorsun? Örn: Yıldıza yaklaşıp atmosferi kalınlaştır.",sc_save:"Senaryoyu kaydet",sc_note:"Not, parametrelerin anlık görüntüsüyle saklanır. Metin otomatik analiz edilmez.",sc_load:"Yükle",exit:"Laboratuvardan çık",r_t:"Görev raporu",r_sum:"{n}, {c} kaynak adayını incelerken bağımsız bir varsayımsal ötegezegen senaryosu kurdu. Model sıcaklığı {b} °C değerinden {f} °C değerine değişti; eğitsel indeks {i}.",r_src:"Veri kaynakları",r_s1:"Gözlem: NASA SPHEREx, Caltech/IPAC IRSA arşivi",r_s2:"Dosya",r_s3:"Gezegen değerleri: kullanıcı varsayımı, ölçüm değil",r_par:"Parametreler",r_res:"Sonuçlar",r_imp:"Değişken önemi",r_impn:"Her değişkenin aralığının %10'u kadar artışında sıcaklık ve indeks değişimi.",r_notes:"Senaryo notları",r_lim:"Sınırlılıklar",lim:"Bu varsayımsal ötegezegen enerji dengesi modeli SPHEREx kaynağından türetilmemiştir. Bulutları, okyanus dolaşımını, atmosfer kimyasını ve hava olaylarını çözmez; eğitsel indeks bilimsel yaşanabilirlik ölçüsü değildir.",c_var:"Değişken",c_b:"Başlangıç",c_f:"Son",print:"Raporu yazdır / PDF",json:"JSON indir",newm:"Yeni göreve ilerle",mbody:"Etiketler:",l_obs:"NASA/IRSA verisinden gelen gözlem",l_est:"Açık denklemle hesaplanan sonuç",l_sim:"Kullanıcının değiştirdiği varsayım",l_demo:"Gerçek veri değil, örnek görüntü",eq:"Denklemler",exo_note:"Resmî katalog adı değildir · parametreler varsayımsal",exo_badge:"SİMÜLE ÖTEGEZEGEN",ref_title:"Gerçek gözlemler ve gezegen örnekleri",ref_intro:"Bu referanslar laboratuvardaki varsayımsal gezegen modelinden ayrıdır. SPHEREx paneli yıldızlararası bir bulutu; ötegezegen görselleri ve spektrumu Webb gözlemlerini gösterir.",ref_obs:"GERÇEK SPHEREx GÖRÜNTÜSÜ",ref_spherex:"Kuğu X bölgesindeki 3,0 µm su buzu (mavi) ve 3,3 µm PAH emisyonu (turuncu). Bu bir ötegezegen görüntüsü değildir.",ref_art:"SANATÇI TASARIMI",ref_trappist:"Yedi Dünya boyutlu gezegeni bulunan gerçek sistemin NASA sanatçı tasarımı; doğrudan fotoğraf değildir.",ref_measured:"GERÇEK Webb SPEKTRUMU",ref_wasp:"WASP-39 b geçiş spektrumunda 4,3 µm CO₂ izi. Spektrum ölçümdür; arka plan gezegen çizimi temsilidir.",ref_source:"NASA kaynağını aç ↗"},
+en:{welcome:"Welcome",tag:"From the infrared sky to a planetary climate lab",name:"Enter your name",nameErr:"Enter your name to continue.",op:"Operator",s1:"1 · Scan",s2:"2 · Lab",s3:"3 · Report",title:"Find a changing-source candidate in the infrared sky",sub:"Compare NASA SPHEREx images with a slider, mark a changing spot and send it to the lab.",blink:"Blink",side:"Side by side",diff:"Difference",hint:"Click = mark candidate",card:"Candidate card",dl:"Download JSON",send:"Send to {n}'s lab",warn1:"This is not an exoplanet discovery. A marked spot is only a changing-source candidate and needs independent verification.",none:"No candidate yet.",cid:"Candidate",pos:"Pixel",st:"Status",cat:"Catalog",wait:"pending",src:"Source",bA:"Brightness A",bB:"Brightness B",bD:"Difference",ltitle:"Explore the simulated exoplanet climate",hypo:"The exoplanet lab is a simulation separate from the NASA observation. Planet parameters are assumptions, not measurements.",base:"Reference exoplanet",scen:"Scenario exoplanet",setbase:"Use current as baseline",p_earth:"Rocky · temperate",p_snow:"Ice world",p_hot:"Hot exoplanet",p_mars:"Rocky · thin air",v_A:"Albedo",v_D:"Distance to star",v_L:"Star luminosity",v_G:"Greenhouse factor",v_O:"Ocean fraction",v_P:"Surface pressure",v_M:"Mass",v_R:"Radius",v_B:"Magnetic shield",v_X:"Stellar activity",a0:"Quiet",a1:"Sun-like",a2:"Flare-prone",d_A:"Fraction of light the surface reflects. Higher cools the planet.",d_D:"Flux falls with distance squared. Farther means colder.",d_L:"Star brightness. Incoming energy scales directly with it.",d_G:"How strongly the atmosphere traps heat. Higher warms the surface.",d_O:"Share of surface water. In this model it only changes the look.",d_P:"Sets the boiling point of water and the liquid-water range.",d_M:"Sets surface gravity and the ability to hold an atmosphere.",d_R:"Larger radius lowers gravity and escape velocity.",d_B:"Deflects stellar particles and lowers radiation.",d_X:"More frequent flares raise the radiation level.",c_t:"Temperature",c_w:"Water",c_l:"Light",c_a:"Atmosphere",dT:"change",t_txt:"Surface temperature about {t} °C. {d} °C versus baseline.",w_ice:"Most water would be frozen. The surface is covered in ice.",w_liq:"Within the liquid-water range. Oceans can persist.",w_hot:"Very hot. Water boils or evaporates.",l_txt:"Energy from the star is {x} times what Earth receives.",a_thin:"Weak greenhouse effect. Poor at holding heat.",a_mid:"Earth-like, balanced greenhouse effect.",a_hot:"Strong greenhouse effect. Heat builds up.",lc_t:"Last change",lc_none:"Move a variable and read its effect here.",lc_txt:"{v}: {a} → {b}. Surface temperature {d} °C, suitability index {i} points.",ch_t:"Surface temperature vs distance to star",band:"Liquid-water range",der_t:"Derived values",idx:"Suitability index (educational, 0-100)",i_t:"Temperature",i_p:"Pressure",i_r:"Radiation",i_k:"Atmosphere retention",g_:"Surface gravity",ve:"Escape velocity",tb:"Boiling point",dose:"Radiation index",sc_t:"Write your own scenario",sc_name:"Scenario name",sc_ph:"What do you want to test? E.g. move closer to the star and thicken the atmosphere.",sc_save:"Save scenario",sc_note:"The note is stored with a snapshot of the parameters. The text is not analysed automatically.",sc_load:"Load",exit:"Exit lab",r_t:"Mission report",r_sum:"While inspecting source candidate {c}, {n} explored an independent hypothetical exoplanet scenario. Model temperature changed from {b} °C to {f} °C; educational index: {i}.",r_src:"Data sources",r_s1:"Observation: NASA SPHEREx, Caltech/IPAC IRSA archive",r_s2:"File",r_s3:"Planet values: user assumptions, not measurements",r_par:"Parameters",r_res:"Results",r_imp:"Variable importance",r_impn:"Change in temperature and index for a step of 10% of each variable's range.",r_notes:"Scenario notes",r_lim:"Limitations",lim:"This hypothetical exoplanet energy-balance model is not derived from the SPHEREx source. It omits clouds, ocean circulation, atmospheric chemistry and weather; its educational index is not a scientific habitability measure.",c_var:"Variable",c_b:"Baseline",c_f:"Final",print:"Print report / PDF",json:"Download JSON",newm:"Proceed to a new mission",mbody:"Labels:",l_obs:"Observation from NASA/IRSA data",l_est:"Result computed with an explicit equation",l_sim:"Assumption changed by the user",l_demo:"Not real data, sample image",eq:"Equations",exo_note:"Not an official catalog name · assumed parameters",exo_badge:"SIMULATED EXOPLANET",ref_title:"Real observations & exoplanet examples",ref_intro:"These references are separate from the hypothetical planet model in this lab. SPHEREx shows an interstellar cloud; the exoplanet visual and spectrum are from Webb observations.",ref_obs:"REAL SPHEREx IMAGE",ref_spherex:"Cygnus X: 3.0 µm water ice (blue) and 3.3 µm PAH emission (orange). This is not an exoplanet image.",ref_art:"ARTIST CONCEPT",ref_trappist:"NASA concept art of the real seven Earth-sized planet system; not a direct photograph.",ref_measured:"REAL Webb SPECTRUM",ref_wasp:"A 4.3 µm CO₂ feature in the WASP-39 b transit spectrum. The spectrum is measured; the planet backdrop is illustrative.",ref_source:"Open NASA source ↗"},
+de:{welcome:"Willkommen",tag:"Vom Infrarothimmel ins Planetenklima-Labor",name:"Namen eingeben",nameErr:"Gib deinen Namen ein, um fortzufahren.",op:"Operator",s1:"1 · Scannen",s2:"2 · Labor",s3:"3 · Bericht",title:"Einen Kandidaten für eine veränderliche Quelle finden",sub:"NASA-SPHEREx-Bilder per Schieberegler vergleichen, eine Veränderung markieren und ins Labor senden.",blink:"Blink",side:"Nebeneinander",diff:"Differenz",hint:"Klick = Kandidat markieren",card:"Kandidatenkarte",dl:"JSON laden",send:"An {n}s Labor senden",warn1:"Das ist keine Exoplaneten-Entdeckung. Ein markierter Punkt ist nur ein Kandidat und braucht unabhängige Bestätigung.",none:"Noch kein Kandidat.",cid:"Kandidat",pos:"Pixel",st:"Status",cat:"Katalog",wait:"ausstehend",src:"Quelle",bA:"Helligkeit A",bB:"Helligkeit B",bD:"Differenz",ltitle:"Erkunde das Klima des simulierten Exoplaneten",hypo:"Das Exoplanetenlabor ist eine Simulation, getrennt von der NASA-Beobachtung. Planetenparameter sind Annahmen, keine Messwerte.",base:"Referenz-Exoplanet",scen:"Szenario-Exoplanet",setbase:"Aktuellen Stand als Ausgang",p_earth:"Gesteinsplanet · gemäßigt",p_snow:"Eiswelt",p_hot:"Heißer Exoplanet",p_mars:"Gesteinsplanet · dünne Luft",v_A:"Albedo",v_D:"Abstand zum Stern",v_L:"Leuchtkraft",v_G:"Treibhausfaktor",v_O:"Ozeananteil",v_P:"Oberflächendruck",v_M:"Masse",v_R:"Radius",v_B:"Magnetschild",v_X:"Sternaktivität",a0:"Ruhig",a1:"Sonnenähnlich",a2:"Flare-reich",d_A:"Anteil des reflektierten Lichts. Höher kühlt den Planeten.",d_D:"Die Strahlung nimmt mit dem Abstandsquadrat ab. Weiter weg ist kälter.",d_L:"Helligkeit des Sterns. Die Energie steigt direkt mit ihr.",d_G:"Wie stark die Atmosphäre Wärme hält. Höher erwärmt die Oberfläche.",d_O:"Wasseranteil der Oberfläche. In diesem Modell ändert er nur das Aussehen.",d_P:"Bestimmt den Siedepunkt und den Bereich für flüssiges Wasser.",d_M:"Bestimmt Schwerkraft und die Fähigkeit, eine Atmosphäre zu halten.",d_R:"Größerer Radius senkt Schwerkraft und Fluchtgeschwindigkeit.",d_B:"Lenkt Sternteilchen ab und senkt die Strahlung.",d_X:"Häufigere Flares erhöhen die Strahlung.",c_t:"Temperatur",c_w:"Wasser",c_l:"Licht",c_a:"Atmosphäre",dT:"Änderung",t_txt:"Oberflächentemperatur etwa {t} °C. {d} °C gegenüber der Ausgangslage.",w_ice:"Das meiste Wasser wäre gefroren. Die Oberfläche ist vereist.",w_liq:"Im Bereich für flüssiges Wasser. Ozeane können bestehen.",w_hot:"Sehr heiß. Wasser kocht oder verdampft.",l_txt:"Die Energie vom Stern ist das {x}-Fache dessen, was die Erde erhält.",a_thin:"Schwacher Treibhauseffekt. Wärme wird schlecht gehalten.",a_mid:"Erdähnlicher, ausgewogener Treibhauseffekt.",a_hot:"Starker Treibhauseffekt. Wärme staut sich.",lc_t:"Letzte Änderung",lc_none:"Bewege eine Variable und lies hier ihre Wirkung.",lc_txt:"{v}: {a} → {b}. Oberflächentemperatur {d} °C, Eignungsindex {i} Punkte.",ch_t:"Oberflächentemperatur und Abstand zum Stern",band:"Bereich für flüssiges Wasser",der_t:"Abgeleitete Werte",idx:"Eignungsindex (Lernmodell, 0-100)",i_t:"Temperatur",i_p:"Druck",i_r:"Strahlung",i_k:"Atmosphärenhalt",g_:"Schwerkraft",ve:"Fluchtgeschwindigkeit",tb:"Siedepunkt",dose:"Strahlungsindex",sc_t:"Eigenes Szenario schreiben",sc_name:"Szenarioname",sc_ph:"Was möchtest du testen? Z. B. näher an den Stern und dickere Atmosphäre.",sc_save:"Szenario speichern",sc_note:"Die Notiz wird mit einem Parameter-Schnappschuss gespeichert. Der Text wird nicht automatisch analysiert.",sc_load:"Laden",exit:"Labor verlassen",r_t:"Missionsbericht",r_sum:"Bei der Untersuchung des Quellenkandidaten {c} erkundete {n} ein unabhängiges hypothetisches Exoplanetenszenario. Die Modelltemperatur änderte sich von {b} °C auf {f} °C; Lernindex: {i}.",r_src:"Datenquellen",r_s1:"Beobachtung: NASA SPHEREx, Caltech/IPAC IRSA-Archiv",r_s2:"Datei",r_s3:"Planetenwerte: Annahmen des Nutzers, keine Messungen",r_par:"Parameter",r_res:"Ergebnisse",r_imp:"Bedeutung der Variablen",r_impn:"Änderung von Temperatur und Index bei einem Schritt von 10 % des Wertebereichs.",r_notes:"Szenarionotizen",r_lim:"Grenzen",lim:"Dieses hypothetische Energiebilanzmodell für Exoplaneten leitet sich nicht von der SPHEREx-Quelle ab. Wolken, Meeresströmungen, Atmosphärenchemie und Wetter fehlen; der Lernindex ist kein wissenschaftliches Maß für Bewohnbarkeit.",c_var:"Variable",c_b:"Ausgang",c_f:"Ende",print:"Bericht drucken / PDF",json:"JSON laden",newm:"Zur neuen Mission",mbody:"Etiketten:",l_obs:"Beobachtung aus NASA/IRSA-Daten",l_est:"Mit expliziter Gleichung berechnetes Ergebnis",l_sim:"Vom Nutzer geänderte Annahme",l_demo:"Keine echten Daten, Beispielbild",eq:"Gleichungen",exo_note:"Kein offizieller Katalogname · angenommene Werte",exo_badge:"SIMULIERTER EXOPLANET",ref_title:"Echte Beobachtungen & Exoplaneten",ref_intro:"Diese Referenzen sind vom hypothetischen Planetenmodell im Labor getrennt. SPHEREx zeigt eine interstellare Wolke; Exoplanetenbild und Spektrum beruhen auf Webb-Beobachtungen.",ref_obs:"ECHTES SPHEREx-BILD",ref_spherex:"Cygnus X: 3,0-µm-Wassereis (blau) und 3,3-µm-PAH-Emission (orange). Dies ist kein Exoplanetenbild.",ref_art:"KÜNSTLERISCHE DARSTELLUNG",ref_trappist:"NASA-Darstellung des realen Systems mit sieben erdgroßen Planeten; kein direktes Foto.",ref_measured:"ECHTES Webb-SPEKTRUM",ref_wasp:"CO₂-Merkmal bei 4,3 µm im Transmissionsspektrum von WASP-39 b. Das Spektrum ist gemessen, die Planetenillustration ist künstlerisch.",ref_source:"NASA-Quelle öffnen ↗"}
+};
+const V=[
+ {k:"A",min:0,max:.9,step:.01,dec:2,u:""},{k:"D",min:.3,max:3,step:.01,dec:2,u:" AU"},{k:"L",min:.05,max:2,step:.01,dec:2,u:" L_sun"},
+ {k:"G",min:1,max:1.5,step:.01,dec:2,u:""},{k:"O",min:0,max:100,step:1,dec:0,u:" %"},{k:"P",min:.1,max:10,step:.1,dec:1,u:" bar"},
+ {k:"M",min:.1,max:5,step:.1,dec:1,u:" M_E"},{k:"R",min:.5,max:2,step:.01,dec:2,u:" R_E"},{k:"B",min:0,max:100,step:1,dec:0,u:" %"},
+ {k:"X",min:.6,max:2.5,step:0,dec:1,u:""}
+];
+const VM={};V.forEach(v=>VM[v.k]=v);
+const KEYS=V.map(v=>v.k),SENS=["A","D","L","G","P","M","R","B","X"];
+const PRE={earth:{A:.30,D:1,L:1,G:1.13,O:70,P:1,M:1,R:1,B:60,X:1},snow:{A:.62,D:1,L:1,G:1,O:80,P:1,M:1,R:1,B:60,X:1},hot:{A:.2,D:.7,L:1,G:1.35,O:60,P:1,M:1,R:1,B:60,X:1},mars:{A:.25,D:1.52,L:1,G:1.02,O:0,P:.1,M:.11,R:.53,B:5,X:1}};
+let lang="tr";try{lang=localStorage.getItem("adex-lang")||"tr"}catch(e){}let user="",mode="blink",marks=[],real=false,A,B,base=null,lastP=null,notes=[],meta=null,reportData=null,chg=null;
+const $=s=>document.querySelector(s),W=900,H=560;
+const tr=k=>(T[lang][k]!==undefined?T[lang][k]:k);
+const fill=(s,o)=>s.replace(/\{(\w+)\}/g,(m,k)=>o[k]!==undefined?o[k]:m);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const C=k=>(k-273.15).toFixed(1);
+const fmtV=(k,x)=>{const v=VM[k];return k==="X"?tr(x<.8?"a0":(x<1.8?"a1":"a2")):(+x).toFixed(v.dec)+v.u};
+
+function model(p){
+  const S=1361*p.L/(p.D*p.D),Te=Math.pow(S*(1-p.A)/(4*5.670374419e-8),.25),Ts=Te*p.G;
+  const g=9.81*p.M/(p.R*p.R),ve=11.186*Math.sqrt(p.M/p.R);
+  const Tb=1/(1/373.15-(8.314/40650)*Math.log(p.P));
+  const vth=Math.sqrt(8*1.380649e-23*Ts/(Math.PI*4.65e-26))/1000,keep=ve/vth;
+  const dose=(S/1361)*p.X*(1-0.85*p.B/100);
+  let st=1;if(Ts<273.15||Ts>Tb)st=.05;else st=Math.max(.05,1-Math.min(1,Math.abs(Ts-290)/Math.max(30,(Tb-273.15)/2)));
+  let sp=p.P<.5?p.P/.5:(p.P>3?3/p.P:1);sp=Math.max(.05,sp);
+  const sr=1/(1+dose*dose/4),sk=Math.max(.05,Math.min(1,keep/6));
+  const idx=100*Math.pow(st*sp*sr*sk,.5);
+  return{S:S,Te:Te,Ts:Ts,g:g,ve:ve,Tb:Tb,keep:keep,dose:dose,st:st,sp:sp,sr:sr,sk:sk,idx:idx};
+}
+function cur(){const p={};KEYS.forEach(k=>p[k]=+$("#i_"+k).value);return p}
+function setP(p){KEYS.forEach(k=>{$("#i_"+k).value=p[k]})}
+function sens(p){
+  return SENS.map(k=>{const v=VM[k],st=.1*(v.max-v.min),hi=Object.assign({},p),lo=Object.assign({},p);
+    hi[k]=Math.min(v.max,p[k]+st);lo[k]=Math.max(v.min,p[k]-st);
+    const a=model(hi),b=model(lo),f=(2*st)/((hi[k]-lo[k])||1);
+    return{k:k,dT:(a.Ts-b.Ts)*f,dI:(a.idx-b.idx)*f};
+  }).sort((x,y)=>Math.max(Math.abs(y.dT),Math.abs(y.dI))-Math.max(Math.abs(x.dT),Math.abs(x.dI)));
+}
+
+/* giriş */
+function stars(){
+  const c=document.createElement("canvas");c.width=1600;c.height=900;const x=c.getContext("2d");
+  const g=x.createRadialGradient(800,450,80,800,450,1000);g.addColorStop(0,"#1a1534");g.addColorStop(1,"#060914");x.fillStyle=g;x.fillRect(0,0,1600,900);
+  let s=11;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  for(let i=0;i<420;i++){x.fillStyle="rgba("+(r()>.7?"255,150,110":"205,222,255")+","+(.3+r()*.7)+")";x.beginPath();x.arc(r()*1600,r()*900,r()*1.6+.3,0,7);x.fill()}
+  try{const u="url("+c.toDataURL()+")";document.querySelectorAll(".door").forEach(d=>d.style.backgroundImage=u)}catch(e){}
+}
+function launch(){
+  const n=$("#uname").value.trim();
+  if(!n){$("#nerr").textContent=tr("nameErr");$("#uname").focus();return}
+  user=n;$("#nerr").textContent="";$("#intro").classList.add("fly");
+  const rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setTimeout(()=>$("#ic").classList.add("fade"),rm?0:500);
+  setTimeout(()=>$("#intro").classList.add("open"),rm?0:1300);
+  setTimeout(()=>{$("#intro").classList.add("gone");applyLang()},rm?60:2300);
+}
+function resetAll(){
+  marks=[];base=null;lastP=null;notes=[];reportData=null;chg=null;
+  setP(PRE.earth);$("#navlab").disabled=true;$("#navrep").disabled=true;$("#scn").value="";$("#sct").value="";
+  go("scan");renderCard();draw();
+  const i=$("#intro");i.classList.add("nt");i.classList.remove("fly","open","gone");$("#ic").classList.remove("fade");void i.offsetWidth;i.classList.remove("nt");
+  $("#uname").value=user;
+}
+
+/* dil */
+function applyLang(){
+  document.documentElement.lang=lang;$("#lang").value=lang;$("#lang0").value=lang;
+  document.querySelectorAll("[data-i]").forEach(e=>e.textContent=tr(e.dataset.i));
+  document.querySelectorAll("[data-ph]").forEach(e=>e.placeholder=tr(e.dataset.ph));
+  $("#uname").placeholder=tr("name");
+  $("#opn").textContent=tr("op")+": "+user;
+  $("#send").textContent=fill(tr("send"),{n:user||"…"});
+  $("#src").textContent=real?"OBSERVED":"DEMO";$("#src").className="tag "+(real?"t-obs":"t-demo");
+  renderCard();updateLab();renderNotes();if(reportData)buildReport(true);
+}
+
+/* tarama */
+function mk(){const c=document.createElement("canvas");c.width=W;c.height=H;return c}
+function demo(second){
+  const c=mk(),x=c.getContext("2d");
+  const g=x.createRadialGradient(W/2,H/2,50,W/2,H/2,600);g.addColorStop(0,"#1a1230");g.addColorStop(1,"#080b18");
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  for(let i=0;i<280;i++){
+    let px=r()*W,py=r()*H,rad=r()*1.8+.4,col=r()>.6?"255,140,100":"200,220,255";
+    if(i===0&&second)px+=16;
+    if(i===1&&second)rad*=2.6;
+    x.fillStyle="rgba("+col+","+(.5+r()*.5)+")";x.beginPath();x.arc(px,py,rad+(i<2?2.2:0),0,7);x.fill();
+  }
+  return c;
+}
+function load(u){return new Promise(res=>{const i=new Image();i.onload=()=>{const c=mk();c.getContext("2d").drawImage(i,0,0,W,H);res(c)};i.onerror=()=>res(null);i.src=u})}
+function draw(){
+  const x=$("#cv").getContext("2d");x.globalCompositeOperation="source-over";x.globalAlpha=1;x.clearRect(0,0,W,H);
+  if(mode==="side"){x.drawImage(A,0,0,W,H,0,H/4,W/2,H/2);x.drawImage(B,0,0,W,H,W/2,H/4,W/2,H/2);return}
+  x.drawImage(A,0,0);
+  if(mode==="blink"){x.globalAlpha=$("#sl").value/100;x.drawImage(B,0,0);x.globalAlpha=1}
+  else{x.globalCompositeOperation="difference";x.drawImage(B,0,0);x.globalCompositeOperation="source-over"}
+  x.strokeStyle="rgba(148,160,207,.7)";x.fillStyle="rgba(148,160,207,.9)";x.lineWidth=1;x.font="11px monospace";
+  for(let i=100;i<W;i+=100){x.beginPath();x.moveTo(i,0);x.lineTo(i,8);x.stroke();x.fillText(i,i+3,20)}
+  for(let j=100;j<H;j+=100){x.beginPath();x.moveTo(0,j);x.lineTo(8,j);x.stroke();x.fillText(j,10,j+4)}
+  x.strokeStyle="#ff6b4a";x.fillStyle="#ff6b4a";x.lineWidth=2;x.font="14px monospace";
+  marks.forEach(m=>{x.beginPath();x.arc(m.x,m.y,14,0,7);x.stroke();x.fillText(m.id,m.x+18,m.y+4)});
+}
+function bright(c,x,y){
+  try{const d=c.getContext("2d").getImageData(Math.max(0,Math.min(W-1,x)),Math.max(0,Math.min(H-1,y)),1,1).data;return Math.round((d[0]+d[1]+d[2])/3)}catch(e){return null}
+}
+function renderCard(){
+  const m=marks[marks.length-1];$("#send").disabled=!m;
+  if(!m){$("#card").textContent=tr("none");return}
+  const a=bright(A,m.x,m.y),b=bright(B,m.x,m.y),R=(l,v)=>'<div class="row"><span>'+l+'</span><span>'+v+'</span></div>';
+  $("#card").innerHTML=R(tr("cid"),esc(m.id))+R(tr("pos"),"x "+m.x+" · y "+m.y)+R(tr("src"),(real?"OBSERVED":"DEMO")+(meta&&meta.file?" · "+esc(meta.file):""))+
+   R(tr("bA"),a===null?"—":a)+R(tr("bB"),b===null?"—":b)+R(tr("bD"),(a===null||b===null)?"—":(b-a))+R(tr("cat"),tr("wait"))+R(tr("st"),"NEEDS-REVIEW");
+}
+
+/* laboratuvar */
+function planet(cv,p,m){
+  const n=cv.width,x=cv.getContext("2d"),im=x.createImageData(n,n),d=im.data;
+  const r=(n/2-10)*(0.55+0.45*(p.R-0.5)/1.5),sea=(p.O/100)*1.4-0.7,Ts=m.Ts,ag=(p.G-1)*1.6+0.12*Math.min(p.P,5);
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){
+    const u=(i-n/2)/r,v=(j-n/2)/r,q=u*u+v*v,k=(j*n+i)*4;
+    if(q>1){const e=Math.sqrt(q)-1,a=Math.max(0,1-e*8)*ag*1.4;const noise=Math.abs(Math.sin(i*12.9898+j*78.233)*43758.5453)%1;let bg=3+(noise>.998?62:0);const sd=Math.hypot(i-n*.84,j-n*.18),sg=Math.max(0,1-sd/34);d[k]=bg+sg*245;d[k+1]=bg+sg*190;d[k+2]=bg+sg*115;const halo=Math.min(1,a);d[k]=d[k]*(1-halo)+77*halo;d[k+1]=d[k+1]*(1-halo)+190*halo;d[k+2]=d[k+2]*(1-halo)+245*halo;d[k+3]=255;continue}
+    const w=Math.sqrt(1-q);
+    let h=(Math.sin(3.1*u+1.7*Math.sin(2.3*v+1))+Math.sin(2.7*v+1.3*Math.sin(3.7*w))+Math.sin(3.3*w+1.1*Math.sin(2.9*u)))/3;
+    h+=0.35*Math.sin(7*u+3*Math.sin(5*v))*Math.sin(6*w+2*u);
+    const Tl=Ts+12-45*v*v;let c;
+    if(h<sea){
+      if(Tl<271)c=[226,238,250];
+      else if(Ts>m.Tb)c=[196,170,140];
+      else{const dp=Math.min(1,(sea-h)*1.5);c=[18-dp*8,112-dp*42,156-dp*48]}
+    }else{
+      if(Tl<268)c=[225,232,242];else if(Tl>330)c=[205,115,78];else if(Tl>312)c=[191,150,109];else if(Tl>288)c=[135,111,161];else c=[91,139,143];
+    }
+    const L=-0.5*u-0.4*v+0.75*w,sh=0.22+0.78*Math.max(0,L);
+    const cl=(Math.sin(5*u+2*Math.sin(4*w))+Math.sin(4*v+3*Math.sin(3*u)))*0.5,ca=Math.min(.9,Math.max(0,cl-0.5)*0.9*(Ts>m.Tb?1.4:1)*Math.min(1.5,.4+p.P));
+    const rim=Math.pow(Math.sqrt(q),6)*ag*.8;
+    for(let t=0;t<3;t++){let val=c[t]*(1-ca)+255*ca;val=val*sh+[110,170,255][t]*rim;d[k+t]=Math.max(0,Math.min(255,val))}
+    d[k+3]=255;
+  }
+  x.clearRect(0,0,n,n);x.putImageData(im,0,0);
+}
+function chart(p,m){
+  const cv=$("#ch"),x=cv.getContext("2d"),w=cv.width,h=cv.height,L=46,Bt=26,Tp=10,Rt=10;
+  const y0=100,y1=520,X=d=>L+(d-.3)/2.7*(w-L-Rt),Y=t=>h-Bt-(t-y0)/(y1-y0)*(h-Bt-Tp);
+  x.clearRect(0,0,w,h);
+  x.fillStyle="rgba(92,225,230,.16)";x.fillRect(L,Y(Math.min(y1,m.Tb)),w-L-Rt,Y(273.15)-Y(Math.min(y1,m.Tb)));
+  x.strokeStyle="#2a3566";x.fillStyle="#94a0cf";x.font="11px monospace";x.lineWidth=1;
+  for(let t=100;t<=500;t+=100){x.beginPath();x.moveTo(L,Y(t));x.lineTo(w-Rt,Y(t));x.stroke();x.fillText(t+" K",4,Y(t)+4)}
+  for(let d=.5;d<=3;d+=.5){x.fillText(d+" AU",X(d)-14,h-8)}
+  x.strokeStyle="#ff6b4a";x.lineWidth=2;x.beginPath();
+  for(let d=.3;d<=3.001;d+=.05){const q=Object.assign({},p,{D:d}),t=model(q).Ts;const px=X(d),py=Math.max(Tp,Math.min(h-Bt,Y(t)));d<=.301?x.moveTo(px,py):x.lineTo(px,py)}
+  x.stroke();
+  x.fillStyle="#ffc857";x.beginPath();x.arc(X(p.D),Math.max(Tp,Math.min(h-Bt,Y(m.Ts))),6,0,7);x.fill();
+}
+function updateLab(){
+  const p=cur(),m=model(p);
+  V.forEach(v=>{const o=$("#o_"+v.k);if(o)o.textContent=fmtV(v.k,p[v.k])});
+  if(!marks.length)return;
+  if(!base)base={p:p,m:m};
+  planet($("#ps"),p,m);planet($("#pb"),base.p,base.m);chart(p,m);
+  const dt=m.Ts-base.m.Ts;
+  $("#tb").textContent=C(base.m.Ts)+" °C";$("#tsn").textContent=C(m.Ts)+" °C";
+  $("#delta").textContent=(dt>=0?"+":"")+dt.toFixed(1)+" °C "+tr("dT");
+  $("#x_t").textContent=fill(tr("t_txt"),{t:C(m.Ts),d:(dt>=0?"+":"")+dt.toFixed(1)});
+  $("#x_w").textContent=(m.Ts<273.15?tr("w_ice"):(m.Ts<=m.Tb?tr("w_liq"):tr("w_hot")));
+  $("#x_l").textContent=fill(tr("l_txt"),{x:(m.S/1361).toFixed(2)});
+  $("#x_a").textContent=p.G<1.06?tr("a_thin"):(p.G<=1.25?tr("a_mid"):tr("a_hot"));
+  $("#idx").textContent=m.idx.toFixed(0);
+  const M=[["i_t",m.st],["i_p",m.sp],["i_r",m.sr],["i_k",m.sk]];
+  $("#meters").innerHTML=M.map(a=>'<div class="mr"><span>'+tr(a[0])+'</span><div class="meter"><i style="width:'+Math.round(a[1]*100)+'%"></i></div></div>').join("");
+  const R=(l,v)=>'<div class="row"><span>'+l+'</span><span>'+v+'</span></div>';
+  $("#der").innerHTML=R(tr("g_"),m.g.toFixed(2)+" m/s²")+R(tr("ve"),m.ve.toFixed(1)+" km/s")+R(tr("tb"),C(m.Tb)+" °C")+R(tr("dose"),m.dose.toFixed(2))+R("T_eq",C(m.Te)+" °C");
+  $("#lchg").textContent=chg?fill(tr("lc_txt"),{v:tr("v_"+chg.k),a:fmtV(chg.k,chg.a),b:fmtV(chg.k,chg.b),d:(chg.dT>=0?"+":"")+chg.dT.toFixed(1),i:(chg.dI>=0?"+":"")+chg.dI.toFixed(0)})+" "+tr("d_"+chg.k):tr("lc_none");
+}
+function onVar(k){
+  const p=cur(),prev=lastP||p,a=prev[k],b=p[k];
+  if(a!==b){const m1=model(prev),m2=model(p);chg={k:k,a:a,b:b,dT:m2.Ts-m1.Ts,dI:m2.idx-m1.idx}}
+  lastP=p;updateLab();
+}
+function buildVars(){
+  const box=$("#vars");
+  V.forEach(v=>{
+    const d=document.createElement("div");d.className="vr";
+    let inp;
+    if(v.k==="X"){inp='<select id="i_X" style="width:100%"><option value="0.6" data-i="a0"></option><option value="1" data-i="a1" selected></option><option value="2.5" data-i="a2"></option></select>'}
+    else{const def=PRE.earth[v.k];inp='<input type="range" id="i_'+v.k+'" min="'+v.min+'" max="'+v.max+'" step="'+v.step+'" value="'+def+'">'}
+    d.innerHTML='<label><span data-i="v_'+v.k+'"></span><b id="o_'+v.k+'" class="mono"></b></label>'+inp+'<small data-i="d_'+v.k+'"></small>';
+    box.appendChild(d);
+    d.querySelector("#i_"+v.k).oninput=()=>onVar(v.k);
+  });
+}
+function renderNotes(){
+  const L=$("#sclist");L.innerHTML="";
+  notes.forEach((n,i)=>{
+    const d=document.createElement("div");d.className="note";
+    const t=document.createElement("b");t.textContent=n.title;
+    const p=document.createElement("div");p.style.color="var(--mute)";p.textContent=n.text;
+    const s=document.createElement("div");s.className="mono";s.textContent=C(n.m.Ts)+" °C · "+n.m.idx.toFixed(0)+"/100";
+    const b=document.createElement("button");b.textContent=tr("sc_load");b.style.marginTop="6px";
+    b.onclick=()=>{setP(n.p);lastP=cur();chg=null;updateLab()};
+    d.append(t,p,s,b);L.appendChild(d);
+  });
+}
+function addNote(){
+  const t=$("#scn").value.trim(),x=$("#sct").value.trim();if(!t&&!x)return;
+  const p=cur();notes.push({title:t||("#"+(notes.length+1)),text:x,p:p,m:model(p),when:new Date().toISOString()});
+  $("#scn").value="";$("#sct").value="";renderNotes();
+}
+
+/* rapor */
+function buildReport(keep){
+  const p=cur(),m=model(p);
+  if(!keep||!reportData)reportData={user:user,cand:marks[marks.length-1],real:real,file:meta&&meta.file||null,base:base,p:p,m:m,notes:notes.slice(),when:new Date().toISOString()};
+  const r=reportData,S=sens(r.p),R=(l,v)=>'<div class="row"><span>'+l+'</span><span>'+v+'</span></div>';
+  const rows=KEYS.map(k=>'<tr><td>'+tr("v_"+k)+'</td><td class="mono">'+fmtV(k,r.base.p[k])+'</td><td class="mono">'+fmtV(k,r.p[k])+'</td></tr>').join("");
+  const imp=S.map(s=>{const w=Math.min(100,Math.max(Math.abs(s.dT),Math.abs(s.dI))*2);
+    return '<div class="mr"><span style="width:150px">'+tr("v_"+s.k)+'</span><div class="meter"><i style="width:'+w+'%"></i></div><span class="mono" style="width:150px;text-align:right">'+(s.dT>=0?"+":"")+s.dT.toFixed(1)+' K · '+(s.dI>=0?"+":"")+s.dI.toFixed(1)+'</span></div>'}).join("");
+  const nt=r.notes.length?r.notes.map(n=>'<div class="note"><b>'+esc(n.title)+'</b><div>'+esc(n.text)+'</div><div class="mono">'+C(n.m.Ts)+' °C · '+n.m.idx.toFixed(0)+'/100</div></div>').join(""):"—";
+  $("#rep").innerHTML=
+   '<div class="box"><p style="margin:0">'+esc(fill(tr("r_sum"),{n:r.user,c:r.cand.id,b:C(r.base.m.Ts),f:C(r.m.Ts),i:r.m.idx.toFixed(0)}))+'</p></div>'+
+   '<div class="grid" style="margin-top:18px"><div class="box"><h2>'+tr("r_par")+'</h2><table><tr><th>'+tr("c_var")+'</th><th>'+tr("c_b")+'</th><th>'+tr("c_f")+'</th></tr>'+rows+'</table></div>'+
+   '<div class="box"><h2>'+tr("r_res")+'</h2>'+R("T_eq",C(r.m.Te)+" °C")+R(tr("c_t"),C(r.m.Ts)+" °C")+R(tr("tb"),C(r.m.Tb)+" °C")+R(tr("g_"),r.m.g.toFixed(2)+" m/s²")+R(tr("ve"),r.m.ve.toFixed(1)+" km/s")+R(tr("dose"),r.m.dose.toFixed(2))+R(tr("idx"),r.m.idx.toFixed(0)+" / 100")+'</div></div>'+
+   '<div class="box" style="margin-top:18px"><h2>'+tr("r_imp")+'</h2><p style="color:var(--mute);margin-top:0;font-size:14px">'+tr("r_impn")+'</p>'+imp+'</div>'+
+   '<div class="grid" style="margin-top:18px"><div class="box"><h2>'+tr("r_notes")+'</h2>'+nt+'</div>'+
+   '<div class="box"><h2>'+tr("r_src")+'</h2><p style="margin:0 0 6px">'+tr("r_s1")+'</p><p style="margin:0 0 6px">'+tr("r_s2")+': <span class="mono">'+esc(r.file||(r.real?"data/a.png, data/b.png":"DEMO"))+'</span> <span class="tag '+(r.real?"t-obs":"t-demo")+'">'+(r.real?"OBSERVED":"DEMO")+'</span></p><p style="margin:0 0 6px">'+tr("r_s3")+'</p>'+
+   '<p class="mono" style="margin:8px 0">S = 1361·L/d² · T_eq = [S(1−A)/4σ]^¼ · T_s = T_eq·G · Tb: Clausius–Clapeyron · v_esc = 11.186·√(M/R)</p>'+
+   '<p style="margin:0"><a style="color:var(--obs)" href="https://irsa.ipac.caltech.edu/Missions/spherex.html" target="_blank" rel="noopener">NASA / IRSA — SPHEREx</a></p></div></div>'+
+   '<div class="warn">'+tr("lim")+'</div>';
+}
+
+function go(id){
+  document.querySelectorAll("[data-go]").forEach(x=>x.classList.toggle("on",x.dataset.go===id));
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===id));
+  if(id==="lab")updateLab();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;document.querySelectorAll("[data-m]").forEach(x=>x.classList.toggle("on",x===b));draw()});
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{setP(PRE[b.dataset.p]);lastP=cur();chg=null;updateLab()});
+$("#sl").oninput=draw;
+$("#setb").onclick=()=>{const p=cur();base={p:p,m:model(p)};updateLab()};
+$("#scs").onclick=addNote;
+$("#lb").onclick=launch;
+$("#uname").onkeydown=e=>{if(e.key==="Enter")launch()};
+const setLang=e=>{lang=e.target.value;try{localStorage.setItem("adex-lang",lang)}catch(e){}applyLang()};
+$("#lang").onchange=setLang;$("#lang0").onchange=setLang;
+function pt(e){const r=$("#cv").getBoundingClientRect();let x=Math.round((e.clientX-r.left)*W/r.width),y=Math.round((e.clientY-r.top)*H/r.height);if(mode==="side"){x=(x%(W/2))*2;y=Math.round((y-H/4)*2)}return{x:x,y:y}}
+$("#cv").onmousemove=e=>{const q=pt(e);$("#curs").textContent="x "+q.x+" · y "+q.y};
+$("#cv").onclick=e=>{
+  const q=pt(e);if(q.x<0||q.y<0||q.x>W||q.y>H)return;
+  marks.push({id:"ADEX-"+String(marks.length+1).padStart(3,"0"),x:q.x,y:q.y});renderCard();draw();
+};
+$("#send").onclick=()=>{
+  const m=marks[marks.length-1];$("#lc").textContent=m.id+" · "+(real?"OBSERVED":"DEMO");
+  base=null;chg=null;lastP=cur();$("#navlab").disabled=false;go("lab");
+};
+$("#dl").onclick=()=>{
+  const m=marks[marks.length-1];if(!m)return;
+  dlJSON({id:m.id,x:m.x,y:m.y,source:real?"OBSERVED":"DEMO",status:"NEEDS-REVIEW",catalog_match:null,created:new Date().toISOString()},m.id+".json");
+};
+function dlJSON(o,name){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(o,null,2)],{type:"application/json"}));a.download=name;a.click()}
+$("#exit").onclick=()=>{buildReport(false);$("#navrep").disabled=false;go("report")};
+$("#pr").onclick=()=>window.print();
+$("#rj").onclick=()=>{if(reportData)dlJSON({user:reportData.user,candidate:reportData.cand,source:reportData.real?"OBSERVED":"DEMO",baseline:reportData.base.p,final:reportData.p,results:reportData.m,notes:reportData.notes,model:"one_layer_energy_balance_v2",generated:reportData.when},"adex-report.json")};
+$("#nm").onclick=resetAll;
+
+async function loadUpload(input){return new Promise((resolve,reject)=>{const f=input.files&&input.files[0];if(!f)return reject(new Error("Dosya seçilmedi"));const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{const c=mk();c.getContext("2d").drawImage(im,0,0,W,H);URL.revokeObjectURL(u);resolve({canvas:c,name:f.name})};im.onerror=()=>{URL.revokeObjectURL(u);reject(new Error("Görüntü açılamadı"))};im.src=u})}
+async function usePair(){const fa=$("#fileA").files[0],fb=$("#fileB").files[0];if(!fa||!fb){$("#obsMeta").textContent="Karşılaştırma için Epoch A ve Epoch B görüntülerinin ikisini de seçin.";return}try{const [a,b]=await Promise.all([loadUpload($("#fileA")),loadUpload($("#fileB"))]);A=a.canvas;B=b.canvas;real=true;meta={file:a.name+" ↔ "+b.name};marks=[];applyLang();draw();$("#obsMeta").textContent="Yüklenen gerçek gözlem görüntüleri: "+a.name+" ↔ "+b.name+". Görüntüler piksel düzeyinde hizalanmış olmalıdır."}catch(e){$("#obsMeta").textContent=e.message}}
+$("#fileA").addEventListener("change",usePair);$("#fileB").addEventListener("change",usePair);
+function renderSpectrum(payload){
+  const rows=(payload.measurements||payload.points||[]).filter(v=>Number.isFinite(+v.wavelength_um)&&Number.isFinite(+v.brightness_mjy_sr)).sort((a,b)=>a.wavelength_um-b.wavelength_um);
+  const cv=$("#spectrumChart"),x=cv.getContext("2d"),w=cv.width,h=cv.height,L=64,R=18,T=18,B=38;x.clearRect(0,0,w,h);x.fillStyle="#8ea2b8";x.font="13px sans-serif";
+  if(rows.length<2){x.fillText("Spektrum için en az iki geçerli ölçüm gerekir.",L,45);return}
+  const xmin=Math.min(...rows.map(v=>+v.wavelength_um)),xmax=Math.max(...rows.map(v=>+v.wavelength_um)),ymin=Math.min(0,...rows.map(v=>+v.brightness_mjy_sr)),ymax=Math.max(...rows.map(v=>+v.brightness_mjy_sr)),yr=ymax-ymin||1;
+  const X=v=>L+(v-xmin)/(xmax-xmin||1)*(w-L-R),Y=v=>h-B-(v-ymin)/yr*(h-T-B);
+  x.strokeStyle="#26364b";x.fillStyle="#8ea2b8";x.lineWidth=1;
+  for(let i=0;i<=4;i++){const yy=T+i*(h-T-B)/4;x.beginPath();x.moveTo(L,yy);x.lineTo(w-R,yy);x.stroke();x.fillText((ymax-i*yr/4).toPrecision(3),6,yy+4)}
+  x.fillText("Wavelength (um)",w/2-48,h-8);x.save();x.translate(16,h/2+32);x.rotate(-Math.PI/2);x.fillText("Surface brightness (MJy/sr)",0,0);x.restore();
+  const gaps=rows.slice(1).map((v,i)=>+v.wavelength_um-rows[i].wavelength_um).sort((a,b)=>a-b),typical=gaps[Math.floor(gaps.length/2)]||0,joinGap=Math.max(.1,typical*2.5);
+  x.strokeStyle="#6ce3d0";x.lineWidth=2;x.beginPath();let prev=null;rows.forEach(v=>{const point={x:X(+v.wavelength_um),y:Y(+v.brightness_mjy_sr)};if(!prev||(+v.wavelength_um-prev.w)>joinGap)x.moveTo(point.x,point.y);else x.lineTo(point.x,point.y);prev={x:point.x,y:point.y,w:+v.wavelength_um}});x.stroke();
+  rows.forEach(v=>{const px=X(+v.wavelength_um),py=Y(+v.brightness_mjy_sr),unc=+v.uncertainty_mjy_sr;x.fillStyle=v.quality_ok===false?"#f5c76b":"#ff9b62";if(Number.isFinite(unc)){x.strokeStyle="#8ea2b8";const dy=Math.abs(Y(+v.brightness_mjy_sr+unc)-py);x.beginPath();x.moveTo(px,py-dy);x.lineTo(px,py+dy);x.stroke()}x.beginPath();x.arc(px,py,4,0,Math.PI*2);x.fill()});
+  $("#spectrumStatus").textContent="SPHEREX FITS · OBSERVED";$("#spectrumStatus").className="tag t-obs";const coord=payload.target?`RA ${payload.target.ra_deg} deg · Dec ${payload.target.dec_deg} deg`:"";$("#spectrumInfo").textContent=`${rows.length} measurements · ${coord} · the line is broken across missing wavelength gaps.`
+}
+$("#spectrumFile").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{const p=JSON.parse(await f.text());renderSpectrum(p)}catch(err){$("#spectrumStatus").textContent="JSON OKUNAMADI";$("#spectrumInfo").textContent=err.message}});
+const embeddedSpectrum=$("#embeddedSpectrum");if(embeddedSpectrum){try{renderSpectrum(JSON.parse(embeddedSpectrum.textContent))}catch(e){}}else fetch("data/spectrum.json").then(r=>r.ok?r.json():null).then(p=>{if(p)renderSpectrum(p)}).catch(()=>{});
+(async()=>{
+  stars();buildVars();setP(PRE.earth);
+  const a=await load("data/a.png"),b=await load("data/b.png"),single=(!a||!b)?await load("data/spherex-preview.png"):null;
+  real=!!(a&&b||single);A=a||single||demo(false);B=b||single||demo(true);
+  if(single&&!(a&&b)){meta={file:"SPHEREx Level-2 single observation"};$("#obsMeta").textContent="NASA SPHEREx real infrared image loaded. One observation is shown; it does not establish source variability."}
+  try{const r=await fetch("data/meta.json");if(r.ok){const q=await r.json();meta=q.observations?{file:q.observations.map(o=>o.source_file).join(" ↔ "),observations:q.observations}:q}}catch(e){}
+  applyLang();draw();
+})();
+</script>
+</body>
+</html>
